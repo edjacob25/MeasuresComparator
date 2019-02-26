@@ -3,7 +3,12 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.28315.86
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MeasuresComparator", "MeasuresComparator\MeasuresComparator.csproj", "{B9EF68CE-1FFA-4E8A-BFBA-C008BCE195B6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MeasuresComparator", "MeasuresComparator\MeasuresComparator.csproj", "{B9EF68CE-1FFA-4E8A-BFBA-C008BCE195B6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{923E9507-C0C7-428D-AEDC-FF2A640C8F31}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
