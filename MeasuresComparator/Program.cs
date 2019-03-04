@@ -22,32 +22,34 @@ namespace MeasuresComparator
                     }
                     try
                     {
-                        var classified = ReadArffFile(o.ClassifiedFile);
-                        var referenced = ReadArffFile(o.ReferenceFile);
+                        var clusterized = ReadArffFile(o.ClassifiedFile);
+                        var reference = ReadArffFile(o.ReferenceFile);
 
-                        if (classified.Headers.Contains("Instance_number".ToLowerInvariant()))
+                        if (clusterized.Headers.Contains("Instance_number".ToLowerInvariant()))
                         {
-                            classified.EliminateHeader("Instance_number".ToLowerInvariant());
+                            clusterized.EliminateHeader("Instance_number".ToLowerInvariant());
                         }
 
-                        if (!classified.Headers.Contains("cluster") || !referenced.Headers.Contains("cluster"))
+                        if (!clusterized.Headers.Contains("cluster") || !reference.Headers.Contains("cluster"))
                         {
                             Console.WriteLine("One of the files does not contain the cluster property");
                             return;
                         }
 
-                        if (!classified.Headers.SequenceEqual(referenced.Headers))
+                        if (!clusterized.Headers.SequenceEqual(reference.Headers))
                         {
                             Console.WriteLine($"Datasets do not have the same headers");
                             return;
                         }
 
-                        if (classified.Count != referenced.Count)
+                        if (clusterized.Count != reference.Count)
                         {
-                            Console.WriteLine($"Datasets are not of the same length, classified one is {classified.Count} instances " +
-                                $"long and reference is {referenced.Count} instances long");
+                            Console.WriteLine($"Datasets are not of the same length, clusterized one is {clusterized.Count} instances " +
+                                $"long and reference is {reference.Count} instances long");
                             return;
                         }
+
+                        Console.WriteLine($"The F-Measure is {CalculateFMeasure(reference, clusterized)}");
                     }
                     catch (Exception e)
                     {
@@ -56,14 +58,6 @@ namespace MeasuresComparator
                             Console.WriteLine("Could not parse file");
                         }
                     }
-
-
-
-                    //foreach (var document in data.Records)
-                    //{
-                    //    var val = document.GetValue("doors");
-                    //    Console.WriteLine($"Door is {val}");
-                    //}
                 });
         }
 
@@ -109,14 +103,15 @@ namespace MeasuresComparator
                     }
                 }
                 var dataset = new Dataset(name, headers);
-
+                int i = 1;
                 while ((line = reader.ReadLine()) != null)
                 {
                     var currentLine = line;
                     currentLine = line.Replace("{", string.Empty);
                     currentLine = line.Replace("}", string.Empty);
-                    var record = new Record(headers, currentLine.Split(','));
+                    var record = new Record(headers, currentLine.Split(','), i);
                     dataset.InsertRecord(record);
+                    i++;
                 }
 
                 return dataset;
@@ -126,16 +121,46 @@ namespace MeasuresComparator
 
         private static double CalculateFMeasure(Dataset reference, Dataset test)
         {
-            var truePositives = 0;
-            var type1Errors = 0;
-            var type2Errors = 0;
-            var trueNegatives = 0;
+            var referencePairs = CreatePairs(reference);
+            var testPairs = CreatePairs(test);
+            var truePositives = referencePairs.Intersect(testPairs, new PairComparator()).Count();
+            var falsePositives = testPairs.Count - truePositives;
+            var falseNegatives = referencePairs.Count - truePositives;
 
-            var referencePartitions = reference.Records.GroupBy(e => e.GetValue("cluster"));
-            var referencePairs = referencePartitions
-                .Select(e => e);
+            var precision = (float)truePositives / (truePositives + falsePositives);
+            var recall = (float)truePositives / (truePositives + falseNegatives);
 
+            return 2 * ((precision * recall) / (precision + recall));
+        }
+
+        private class PairComparator : EqualityComparer<(int, int)>
+        {
+            public override bool Equals((int, int) x, (int, int) y)
+                => x.Item1 == y.Item1 && x.Item2 == y.Item2;
+
+            public override int GetHashCode((int, int) obj) => (obj.Item1 + obj.Item2).GetHashCode();
+        }
+
+        private static List<(int, int)> CreatePairs(Dataset set)
+        {
+            var partitions = set.Records.GroupBy(e => e.GetValue("cluster"));
+            var pairs = new List<(int, int)>();
+            foreach (var cluster in partitions)
+            {
+                var clusterPairs = cluster.DifferentCombinations(2).Select(e => (e.FirstOrDefault().Position, e.Skip(1).FirstOrDefault().Position));
+                pairs.AddRange(clusterPairs);
+            }
+            return pairs;
         }
     }
 
+    public static class Extensions
+    {
+        public static IEnumerable<IEnumerable<T>> DifferentCombinations<T>(this IEnumerable<T> elements, int k)
+        {
+            return k == 0 ? new[] { new T[0] } :
+              elements.SelectMany((e, i) =>
+                elements.Skip(i + 1).DifferentCombinations(k - 1).Select(c => (new[] { e }).Concat(c)));
+        }
+    }
 }

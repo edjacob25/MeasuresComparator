@@ -8,6 +8,7 @@ namespace MeasuresComparator
     {
         public Dictionary<string, string> Values { get; private set; }
         public IList<String> Headers { get; }
+        public int Position { get; set; }
 
         public Record(IList<string> headers, IList<string> values)
         {
@@ -17,6 +18,17 @@ namespace MeasuresComparator
             {
                 Values.TryAdd(pair.Header, pair.Value);
             }
+        }
+
+        public Record(IList<string> headers, IList<string> values, int position)
+        {
+            Headers = headers;
+            Values = new Dictionary<string, string>();
+            foreach (var pair in headers.Zip(values, (h, v) => new { Header = h, Value = v }))
+            {
+                Values.TryAdd(pair.Header, pair.Value);
+            }
+            Position = position;
         }
 
         public string GetValue(string header)
