@@ -44,6 +44,7 @@ def modify_file(filename):
         permitted_indexes = [x[3] for x in permitted_attributes]
         for item in permitted_attributes:
             new_file.write(item[2])
+        new_file.write("@DATA\n")
         for datapoint in data:
             points = [x for i, x in enumerate(datapoint) if i in permitted_indexes]
             result = ",".join(points)
