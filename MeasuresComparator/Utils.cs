@@ -2,8 +2,7 @@ using System;
 
 namespace MeasuresComparator
 {
-    class ParserException : Exception
+    internal class ParserException : Exception
     {
-
     }
 }

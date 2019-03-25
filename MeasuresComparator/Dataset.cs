@@ -1,12 +1,10 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace MeasuresComparator
 {
-    class Dataset
+    internal class Dataset
     {
         public IList<string> Headers { get; private set; }
         public IList<Record> Records { get; }

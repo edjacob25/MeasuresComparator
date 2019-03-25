@@ -6,9 +6,9 @@ using System.Linq;
 
 namespace MeasuresComparator
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             Parser.Default.ParseArguments<Options>(args)
                 .WithParsed(o =>
@@ -68,7 +68,6 @@ namespace MeasuresComparator
 
             [Option('r', "reference", Required = true, HelpText = "Path of the reference file to compare")]
             public string ReferenceFile { get; set; }
-
         }
 
         private static Dataset ReadArffFile(string route)
@@ -103,7 +102,7 @@ namespace MeasuresComparator
                     }
                 }
                 var dataset = new Dataset(name, headers);
-                int i = 1;
+                var i = 1;
                 while ((line = reader.ReadLine()) != null)
                 {
                     var currentLine = line;
@@ -116,7 +115,6 @@ namespace MeasuresComparator
 
                 return dataset;
             }
-
         }
 
         private static double CalculateFMeasure(Dataset reference, Dataset test)

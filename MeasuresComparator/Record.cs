@@ -1,13 +1,12 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace MeasuresComparator
 {
-    class Record
+    internal class Record
     {
         public Dictionary<string, string> Values { get; private set; }
-        public IList<String> Headers { get; }
+        public IList<string> Headers { get; }
         public int Position { get; set; }
 
         public Record(IList<string> headers, IList<string> values)
