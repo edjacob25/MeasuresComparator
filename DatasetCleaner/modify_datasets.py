@@ -43,7 +43,7 @@ def modify_file(filename):
         permitted_attributes = [x for x in attributes if x[1] == "" and x[0].split('{')[0] in attributes_used]
         permitted_indexes = [x[3] for x in permitted_attributes]
         for item in permitted_attributes:
-            new_file.write(item[2])
+            new_file.write(item[2].replace("{", " {" ))
         new_file.write("@DATA\n")
         for datapoint in data:
             points = [x for i, x in enumerate(datapoint) if i in permitted_indexes]
