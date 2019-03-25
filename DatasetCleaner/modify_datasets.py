@@ -1,6 +1,8 @@
 import os
+import argparse
 
 def modify_file(filename):
+    print(f"File to clean: {filename}")
     attributes = []
     data = []
     attributes_used = []
@@ -31,7 +33,7 @@ def modify_file(filename):
                 if line_upper.startswith("@DATA"):
                     data_processing = True
             else:
-                line_data = line.split(',')
+                line_data = [x.lstrip() for x in line.split(',')]
                 data.append(line_data)
 
     new_filename = filename.replace(".dat", "_cleaned.arff")
@@ -43,6 +45,30 @@ def modify_file(filename):
         for item in permitted_attributes:
             new_file.write(item[2])
         for datapoint in data:
-            points = [x for i, x in enumerate(datapoint) if i in permitted_indexes] 
+            points = [x for i, x in enumerate(datapoint) if i in permitted_indexes]
             result = ",".join(points)
             new_file.write(result)
+    print(f"Created file {new_filename}")
+
+
+def apply_cleaning_recursively(root_dir):
+    root_dir = os.path.abspath(root_dir)
+
+    for item in os.listdir(root_dir):
+        item_full_path = os.path.join(root_dir, item)
+        if os.path.isdir(item_full_path):
+            apply_cleaning_recursively(item_full_path)
+        elif item_full_path.endswith(".dat") or item_full_path.endswith(".dat"):
+            modify_file(item_full_path)
+
+
+parser = argparse.ArgumentParser(description='cleans a dataset or set or datasets to only contain categorical attributes')
+parser.add_argument('file', help="File or directory to be converted")
+
+args = parser.parse_args()
+
+if os.path.isdir(args.file):
+    print(f"{args.file} is a directory, looking for .dat files inside")
+    apply_cleaning_recursively(args.file)
+else:
+    modify_file(args.file)
