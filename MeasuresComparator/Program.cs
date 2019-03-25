@@ -120,7 +120,9 @@ namespace MeasuresComparator
         private static double CalculateFMeasure(Dataset reference, Dataset test)
         {
             var referencePairs = CreatePairs(reference);
+            //PrintPairs(referencePairs);
             var testPairs = CreatePairs(test);
+            //PrintPairs(testPairs);
             var truePositives = referencePairs.Intersect(testPairs, new PairComparator()).Count();
             var falsePositives = testPairs.Count - truePositives;
             var falseNegatives = referencePairs.Count - truePositives;
@@ -129,6 +131,14 @@ namespace MeasuresComparator
             var recall = (float)truePositives / (truePositives + falseNegatives);
 
             return 2 * ((precision * recall) / (precision + recall));
+        }
+
+        private static void PrintPairs(List<(int, int)> pairList)
+        {
+            foreach (var item in pairList)
+            {
+                Console.Write($"({item.Item1},{item.Item2}),");
+            }
         }
 
         private class PairComparator : EqualityComparer<(int, int)>
@@ -145,7 +155,8 @@ namespace MeasuresComparator
             var pairs = new List<(int, int)>();
             foreach (var cluster in partitions)
             {
-                var clusterPairs = cluster.DifferentCombinations(2).Select(e => (e.FirstOrDefault().Position, e.Skip(1).FirstOrDefault().Position));
+                var clusterPairs = cluster.DifferentCombinations(2)
+                    .Select(e => (e.FirstOrDefault().Position, e.Skip(1).FirstOrDefault().Position));
                 pairs.AddRange(clusterPairs);
             }
             return pairs;
