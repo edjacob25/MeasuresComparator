@@ -13,11 +13,15 @@ namespace MeasuresComparator
             Parser.Default.ParseArguments<Options>(args)
                 .WithParsed(o =>
                 {
-                    Console.WriteLine($"Options are {o.ClassifiedFile} and {o.ReferenceFile}");
+                    if (!Console.IsOutputRedirected)
+                    {
+                        Console.WriteLine($"Options are {o.ClassifiedFile} and {o.ReferenceFile}");
+                    }
 
                     if (!File.Exists(o.ClassifiedFile) || !File.Exists(o.ReferenceFile))
                     {
                         Console.WriteLine("One of the files does not exist or cannot be found");
+                        Environment.ExitCode = 1;
                         return;
                     }
                     try
@@ -25,20 +29,28 @@ namespace MeasuresComparator
                         var clusterized = ReadArffFile(o.ClassifiedFile);
                         var reference = ReadArffFile(o.ReferenceFile);
 
-                        if (clusterized.Headers.Contains("Instance_number".ToLowerInvariant()))
+                        if (clusterized.ContainsHeader("Instance_number".ToLowerInvariant()))
                         {
                             clusterized.EliminateHeader("Instance_number".ToLowerInvariant());
                         }
 
-                        if (!clusterized.Headers.Contains("cluster") || !reference.Headers.Contains("cluster"))
+                        if (!clusterized.ContainsHeader("cluster") || (!reference.ContainsHeader("class") && !reference.ContainsHeader("cluster")))
                         {
-                            Console.WriteLine("One of the files does not contain the cluster property");
+                            Console.WriteLine("The clusterized file does not contain the 'cluster' attribute or " +
+                                "the reference file does not contain a 'class' or 'cluster' property");
+                            Environment.ExitCode = 1;
                             return;
                         }
 
-                        if (!clusterized.Headers.SequenceEqual(reference.Headers))
+                        if (reference.ContainsHeader("class"))
+                        {
+                            reference.TransformClassToCluster();
+                        }
+
+                        if (!clusterized.Headers.Select(e => e.Name).SequenceEqual(reference.Headers.Select(e => e.Name)))
                         {
                             Console.WriteLine($"Datasets do not have the same headers");
+                            Environment.ExitCode = 1;
                             return;
                         }
 
@@ -46,10 +58,19 @@ namespace MeasuresComparator
                         {
                             Console.WriteLine($"Datasets are not of the same length, clusterized one is {clusterized.Count} instances " +
                                 $"long and reference is {reference.Count} instances long");
+                            Environment.ExitCode = 1;
                             return;
                         }
 
-                        Console.WriteLine($"The F-Measure is {CalculateFMeasure(reference, clusterized)}");
+                        var fMeasure = CalculateFMeasure(reference, clusterized);
+                        if (Console.IsOutputRedirected)
+                        {
+                            Console.WriteLine($"{fMeasure}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"The F-Measure is {fMeasure}");
+                        }
                     }
                     catch (Exception e)
                     {
@@ -74,7 +95,7 @@ namespace MeasuresComparator
         {
             using (var reader = new StreamReader(route))
             {
-                var headers = new List<string>();
+                var headers = new List<Header>();
                 var name = string.Empty;
                 string line;
                 while ((line = reader.ReadLine()) != null)
@@ -96,19 +117,27 @@ namespace MeasuresComparator
                     }
                     else if (line.IndexOf("@attribute", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
-                        var split = line.Split(' ');
+                        var split = line.Split(' ', 3);
+                        var header = new Header()
+                        {
+                            Name = split[1].ToLowerInvariant(),
+                            Possibilities = split[2].Replace("{", "").Replace("}", "").Split(',').Select(e => e.Trim()).ToList(),
+                            Type = "Categorical"
+                        };
                         // Process headers here
-                        headers.Add(split[1].ToLowerInvariant());
+                        headers.Add(header);
                     }
                 }
+
                 var dataset = new Dataset(name, headers);
+
                 var i = 1;
                 while ((line = reader.ReadLine()) != null)
                 {
                     var currentLine = line;
                     currentLine = line.Replace("{", string.Empty);
                     currentLine = line.Replace("}", string.Empty);
-                    var record = new Record(headers, currentLine.Split(','), i);
+                    var record = new Record(headers.Select(e => e.Name).ToList(), currentLine.Split(','), i);
                     dataset.InsertRecord(record);
                     i++;
                 }

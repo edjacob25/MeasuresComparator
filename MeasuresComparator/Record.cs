@@ -6,7 +6,7 @@ namespace MeasuresComparator
     internal class Record
     {
         public Dictionary<string, string> Values { get; private set; }
-        public IList<string> Headers { get; }
+        public IList<string> Headers { get; private set; }
         public int Position { get; set; }
 
         public Record(IList<string> headers, IList<string> values)
