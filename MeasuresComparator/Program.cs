@@ -138,8 +138,6 @@ namespace MeasuresComparator
                 Console.WriteLine($"Create pairs for test took {watch.ElapsedMilliseconds} milliseconds ");
             }
 
-            Console.WriteLine($"Length of testPairs = {testPairs.Count}, Length of referencePairs = {referencePairs.Count}");
-
             watch.Restart();
             watch.Start();
             var truePositives = 0;
@@ -179,8 +177,15 @@ namespace MeasuresComparator
             var pairs = new List<(int, int)>();
             foreach (var cluster in partitions)
             {
-                var clusterPairs = cluster.DifferentCombinations(2)
-                    .Select(e => (e.FirstOrDefault().Position, e.Skip(1).FirstOrDefault().Position));
+                var clusterPairs = new List<(int, int)>();
+                var cl = cluster.ToArray();
+                for (int i = 0; i < cluster.Count(); i++)
+                {
+                    for (int j = i + 1; j < cluster.Count(); j++)
+                    {
+                        clusterPairs.Add((cl[i].Position, cl[j].Position));
+                    }
+                }
                 pairs.AddRange(clusterPairs);
             }
 
