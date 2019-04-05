@@ -5,21 +5,11 @@ namespace MeasuresComparator
 {
     internal class Record
     {
-        public Dictionary<string, string> Values { get; private set; }
-        public IList<string> Headers { get; private set; }
-        public int Position { get; set; }
+        public Dictionary<string, string> Values { get; }
+        public IList<string> Headers { get; }
+        public int Position { get; }
 
-        public Record(IList<string> headers, IList<string> values)
-        {
-            Headers = headers;
-            Values = new Dictionary<string, string>();
-            foreach (var pair in headers.Zip(values, (h, v) => new { Header = h, Value = v }))
-            {
-                Values.TryAdd(pair.Header, pair.Value);
-            }
-        }
-
-        public Record(IList<string> headers, IList<string> values, int position)
+        public Record(IList<string> headers, IEnumerable<string> values, int position = 0)
         {
             Headers = headers;
             Values = new Dictionary<string, string>();

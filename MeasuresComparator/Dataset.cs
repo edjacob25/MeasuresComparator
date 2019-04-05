@@ -6,7 +6,7 @@ namespace MeasuresComparator
 {
     internal class Dataset
     {
-        public IList<Header> Headers { get; private set; }
+        public IList<Header> Headers { get; }
         public IList<Record> Records { get; }
         public int Count => Records.Count;
         public string Name { get; }
