@@ -60,10 +60,10 @@ namespace MeasuresComparator
                 header.Name = "cluster";
                 var i = 1;
                 var equivalences = new List<(string, string)>();
-                foreach (var posibility in header.Possibilities)
+                foreach (var possibility in header.Possibilities)
                 {
                     var newName = $"cluster{i}";
-                    equivalences.Add((posibility, newName));
+                    equivalences.Add((possibility, newName));
                     i++;
                 }
 

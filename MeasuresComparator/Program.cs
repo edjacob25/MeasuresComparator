@@ -1,6 +1,7 @@
 using CommandLine;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -120,11 +121,44 @@ namespace MeasuresComparator
 
         private static double CalculateFMeasure(Dataset reference, Dataset test)
         {
+            var watch = new Stopwatch();
+            watch.Start();
             var referencePairs = CreatePairs(reference);
-            //PrintPairs(referencePairs);
+            watch.Stop();
+            if (!Console.IsOutputRedirected)
+            {
+                Console.WriteLine($"Create pairs for reference took {watch.ElapsedMilliseconds} milliseconds ");
+            }
+            watch.Restart();
+            watch.Start();
             var testPairs = CreatePairs(test);
-            //PrintPairs(testPairs);
-            var truePositives = referencePairs.Intersect(testPairs, new PairComparator()).Count();
+            watch.Stop();
+            if (!Console.IsOutputRedirected)
+            {
+                Console.WriteLine($"Create pairs for test took {watch.ElapsedMilliseconds} milliseconds ");
+            }
+
+            Console.WriteLine($"Length of testPairs = {testPairs.Count}, Length of referencePairs = {referencePairs.Count}");
+
+            watch.Restart();
+            watch.Start();
+            var truePositives = 0;
+            var comparer = new PairComparer();
+            testPairs.Sort(comparer);
+            for (var i = 0; i < referencePairs.Count; i++)
+            {
+                var index = testPairs.BinarySearch(referencePairs[i], comparer);
+                if (index >= 0)
+                {
+                    truePositives += 1;
+                }
+            }
+            watch.Stop();
+            if (!Console.IsOutputRedirected)
+            {
+                Console.WriteLine($"Calculate true positives manually took {watch.ElapsedMilliseconds} milliseconds ");
+            }
+
             var falsePositives = testPairs.Count - truePositives;
             var falseNegatives = referencePairs.Count - truePositives;
 
@@ -160,6 +194,30 @@ namespace MeasuresComparator
 
             [Option('r', "reference", Required = true, HelpText = "Path of the reference file to compare")]
             public string ReferenceFile { get; set; }
+        }
+
+        private class PairComparer : IComparer<(int, int)>
+        {
+            public int Compare((int, int) x, (int, int) y)
+            {
+                if (x.Item1 < y.Item1)
+                {
+                    return -1;
+                }
+                if (x.Item1 > y.Item1)
+                {
+                    return 1;
+                }
+                if (x.Item2 < y.Item2)
+                {
+                    return -1;
+                }
+                if (x.Item2 > y.Item2)
+                {
+                    return 1;
+                }
+                return 0;
+            }
         }
 
         private class PairComparator : EqualityComparer<(int, int)>
