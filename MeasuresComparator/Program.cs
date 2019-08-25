@@ -65,7 +65,15 @@ namespace MeasuresComparator
                     }
                     catch (Exception e)
                     {
-                        if (e is ParserException) Console.WriteLine("Could not parse file");
+                        Environment.ExitCode = 1
+                        if (e is ParserException)
+                        {
+                            Console.WriteLine("Could not parse file");
+                        }
+                        else
+                        {
+                            Console.WriteLine(e);
+                        }
                     }
                 });
         }
@@ -110,6 +118,11 @@ namespace MeasuresComparator
                 {
                     var currentLine = line.Replace("{", string.Empty);
                     currentLine = currentLine.Replace("}", string.Empty);
+                    if (currentLine.Split(',').Length < headers.Count)
+                    {
+                        continue;
+                    }
+
                     var record = new Record(headers.Select(e => e.Name).ToList(), currentLine.Split(','), i);
                     dataset.InsertRecord(record);
                     i++;
