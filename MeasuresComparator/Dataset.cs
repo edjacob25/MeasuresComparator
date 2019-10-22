@@ -24,6 +24,7 @@ namespace MeasuresComparator
             {
                 throw new Exception("Headers do not match");
             }
+
             Records.Add(record);
         }
 
@@ -33,15 +34,13 @@ namespace MeasuresComparator
             {
                 throw new Exception("Header does not exist");
             }
-            else
+
+            var header = Headers.Single(e => e.Name == name);
+            Headers.Remove(header);
+            foreach (var record in Records)
             {
-                var header = Headers.Single(e => e.Name == name);
-                Headers.Remove(header);
-                foreach (var record in Records)
-                {
-                    record.Headers.Remove(name);
-                    record.Values.Remove(name);
-                }
+                record.Headers.Remove(name);
+                record.Values.Remove(name);
             }
         }
 
@@ -54,29 +53,27 @@ namespace MeasuresComparator
             {
                 throw new Exception("Header does not exist");
             }
-            else
+
+            var header = Headers.Single(e => e.Name == "class");
+            header.Name = "cluster";
+            var i = 1;
+            var equivalences = new List<(string, string)>();
+            foreach (var possibility in header.Possibilities)
             {
-                var header = Headers.Single(e => e.Name == "class");
-                header.Name = "cluster";
-                var i = 1;
-                var equivalences = new List<(string, string)>();
-                foreach (var possibility in header.Possibilities)
-                {
-                    var newName = $"cluster{i}";
-                    equivalences.Add((possibility, newName));
-                    i++;
-                }
+                var newName = $"cluster{i}";
+                equivalences.Add((possibility, newName));
+                i++;
+            }
 
-                header.Possibilities = equivalences.Select(e => e.Item2).ToList();
+            header.Possibilities = equivalences.Select(e => e.Item2).ToList();
 
-                foreach (var record in Records)
-                {
-                    var index = record.Headers.IndexOf("class");
-                    record.Headers[index] = "cluster";
-                    var value = record.Values.GetValueOrDefault("class");
-                    record.Values.Remove("class");
-                    record.Values.Add("cluster", equivalences.Single(e => e.Item1 == value).Item2);
-                }
+            foreach (var record in Records)
+            {
+                var index = record.Headers.IndexOf("class");
+                record.Headers[index] = "cluster";
+                var value = record.Values.GetValueOrDefault("class");
+                record.Values.Remove("class");
+                record.Values.Add("cluster", equivalences.Single(e => e.Item1 == value).Item2);
             }
         }
     }
