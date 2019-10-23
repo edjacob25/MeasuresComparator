@@ -9,6 +9,8 @@ namespace MeasuresComparator
         public IList<Header> Headers { get; }
         public IList<Record> Records { get; }
         public int Count => Records.Count;
+        public int NumOfClusters => Records.GroupBy(e => e.GetValue("cluster")).Count();
+
         public string Name { get; }
 
         public Dataset(string name, IList<Header> headers)

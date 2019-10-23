@@ -12,10 +12,10 @@ namespace MeasuresComparator
         private static void Main(string[] args)
         {
             Parser.Default.ParseArguments<Options>(args)
-                .WithParsed(GetFMeasure);
+                .WithParsed(GetMeasure);
         }
 
-        private static void GetFMeasure(Options o)
+        private static void GetMeasure(Options o)
         {
             if (!Console.IsOutputRedirected)
             {
@@ -70,8 +70,14 @@ namespace MeasuresComparator
                     return;
                 }
 
-                var fMeasure = CalculateFMeasure(reference, clusterized);
-                Console.WriteLine(Console.IsOutputRedirected ? $"{fMeasure}" : $"The F-Measure is {fMeasure}");
+                double measure = o switch
+                {
+                    var l when l.Rand => CalculateRandIndex(reference, clusterized),
+                    var l when l.AdjustedRand => CalculateAdjustedRandIndex(reference, clusterized),
+                    _ => CalculateFMeasure(reference, clusterized)
+                };
+
+                Console.WriteLine(Console.IsOutputRedirected ? $"{measure}" : $"The Measure is {measure}");
             }
             catch (Exception e)
             {
@@ -145,7 +151,8 @@ namespace MeasuresComparator
             return dataset;
         }
 
-        private static double CalculateFMeasure(Dataset reference, Dataset test)
+
+        private static ClusteringResult GetClusteringResult(Dataset reference, Dataset test)
         {
             var watch = new Stopwatch();
             watch.Start();
@@ -185,13 +192,73 @@ namespace MeasuresComparator
                 Console.WriteLine($"Calculate true positives manually took {watch.ElapsedMilliseconds} milliseconds ");
             }
 
+            var totalPairs = ((reference.Count - 1) * reference.Count) / 2;
             var falsePositives = testPairs.Count - truePositives;
             var falseNegatives = referencePairs.Count - truePositives;
+            return new ClusteringResult
+            {
+                TruePositives = truePositives,
+                FalsePositives = falsePositives,
+                FalseNegatives = falseNegatives,
+                TrueNegatives = totalPairs - truePositives - falsePositives - falseNegatives
+            };
+        }
 
-            var precision = (float) truePositives / (truePositives + falsePositives);
-            var recall = (float) truePositives / (truePositives + falseNegatives);
-
+        private static double CalculateFMeasure(Dataset reference, Dataset test)
+        {
+            var results = GetClusteringResult(reference, test);
+            var precision = (float) results.TruePositives / (results.TruePositives + results.FalsePositives);
+            var recall = (float) results.TruePositives / (results.TruePositives + results.FalseNegatives);
             return 2 * (precision * recall / (precision + recall));
+        }
+
+        private static double CalculateRandIndex(Dataset reference, Dataset test)
+        {
+            var results = GetClusteringResult(reference, test);
+            return (float) (results.TruePositives + results.TrueNegatives) /
+                   (results.TruePositives + results.TrueNegatives + results.FalseNegatives + results.FalsePositives);
+        }
+
+        private static double CalculateAdjustedRandIndex(Dataset reference, Dataset test)
+        {
+            var numOfClusters = reference.NumOfClusters;
+            // Console.WriteLine($"Num of clusters is {reference.NumOfClusters}");
+            var contingencyTable = new int[numOfClusters, numOfClusters];
+            for (var i = 0; i < reference.Count; i++)
+            {
+                var refIndex = int.Parse(reference.Records[i].GetValue("cluster").Replace("cluster", "")) - 1;
+                var testIndex = int.Parse(test.Records[i].GetValue("cluster").Replace("cluster", "")) - 1;
+                contingencyTable[refIndex, testIndex] += 1;
+            }
+
+            var totalSum = 0;
+            for (var i = 0; i < numOfClusters; i++)
+            {
+                for (var j = 0; j < numOfClusters; j++)
+                {
+                    totalSum += GetN2(contingencyTable[i, j]);
+                    // Console.Write($"{contingencyTable[i, j]} ");
+                }
+                // Console.Write("\n");
+            }
+
+            var rowSums = new int[numOfClusters];
+            var colsSums = new int[numOfClusters];
+            foreach (var i in Enumerable.Range(0, numOfClusters))
+            {
+                rowSums[i] = contingencyTable.GetRow(i).Sum();
+                colsSums[i] = contingencyTable.GetCol(i).Sum();
+            }
+
+            var totalRowSum = rowSums.Select(GetN2).Sum();
+            var totalColSum = colsSums.Select(GetN2).Sum();
+
+            var less = (double) totalRowSum * totalColSum / GetN2(reference.Count);
+
+            return (totalSum - less ) /
+                   (0.5 * (totalColSum + totalRowSum) - less);
+
+            int GetN2(int a) => (a * (a -1)) / 2;
         }
 
         private static void PrintPairs(IEnumerable<(int, int)> pairList)
@@ -202,6 +269,7 @@ namespace MeasuresComparator
             }
         }
 
+        // Create pairs of items in each cluster
         private static List<(int, int)> CreatePairs(Dataset set)
         {
             var partitions = set.Records.GroupBy(e => e.GetValue("cluster"));
@@ -231,6 +299,12 @@ namespace MeasuresComparator
 
             [Option('r', "reference", Required = true, HelpText = "Path of the reference file to compare")]
             public string ReferenceFile { get; set; }
+
+            [Option("rand", HelpText = "Use Rand Index instead of F-Measure")]
+            public bool Rand { get; set; }
+
+            [Option("adjusted-rand", HelpText = "Use Adjusted Rand Index instead of F-Measure")]
+            public bool AdjustedRand { get; set; }
         }
 
         private class PairComparer : IComparer<(int, int)>
